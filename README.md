@@ -79,6 +79,32 @@ The project uses this PyInstaller command:
 pyinstaller --noconfirm --clean --windowed --onedir --name "kv-image-downloader" app.py
 ```
 
+## GitHub Actions Builds
+
+GitHub Actions workflows are included for Windows, Linux, and macOS builds:
+
+- `.github/workflows/windows-build.yml`
+- `.github/workflows/linux-build.yml`
+- `.github/workflows/macos-build.yml`
+
+Each workflow:
+
+- checks out the repository
+- installs Python 3.11 plus `openpyxl` and `pyinstaller`
+- defines a workflow version such as `v0.1`
+- runs:
+
+```bash
+pyinstaller --noconfirm --clean --windowed --onedir --name "kv-image-downloader-v0.1" app.py
+```
+
+- packages a versioned release archive such as `kv-image-downloader-v0.1-windows.zip`
+- uploads that archive as a workflow artifact
+
+Update the `VERSION` value in each workflow file when you want a new build version.
+
+You can run them from the GitHub Actions tab with `workflow_dispatch`, or let them run automatically on pushes to `main` and on pull requests.
+
 Notes:
 
 - `--onedir` creates a folder-based app instead of a single-file executable
