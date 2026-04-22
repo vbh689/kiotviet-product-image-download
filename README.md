@@ -86,8 +86,9 @@ GitHub Actions workflows are included for Windows, Linux, and macOS builds:
 - `.github/workflows/windows-build.yml`
 - `.github/workflows/linux-build.yml`
 - `.github/workflows/macos-build.yml`
+- `.github/workflows/release.yml`
 
-Each workflow:
+The three platform build workflows:
 
 - checks out the repository
 - installs Python 3.11 plus `openpyxl` and `pyinstaller`
@@ -101,9 +102,32 @@ pyinstaller --noconfirm --clean --windowed --onedir --name "kv-image-downloader-
 - packages a versioned release archive such as `kv-image-downloader-v0.1-windows.zip`
 - uploads that archive as a workflow artifact
 
-Update the `VERSION` value in each workflow file when you want a new build version.
+Update the `VERSION` value in the platform build workflow files when you want a new artifact version there.
 
 You can run them from the GitHub Actions tab with `workflow_dispatch`, or let them run automatically on pushes to `main` and on pull requests.
+
+## GitHub Releases
+
+The `release.yml` workflow publishes built files as GitHub Release assets.
+
+- Trigger it by pushing a tag such as `v0.1`
+- Or run it manually from the Actions tab and provide a version like `v0.1`
+- It uses that tag or manual input as the release version
+- It builds Windows, Linux, and macOS archives
+- It creates or updates a GitHub release and uploads:
+
+```text
+kv-image-downloader-v0.1-windows.zip
+kv-image-downloader-v0.1-linux.zip
+kv-image-downloader-v0.1-macos.zip
+```
+
+Example tag commands:
+
+```bash
+git tag v0.1
+git push origin v0.1
+```
 
 Notes:
 
