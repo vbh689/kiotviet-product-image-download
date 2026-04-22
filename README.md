@@ -148,6 +148,8 @@ macOS output:
 dist/kv-image-downloader.app
 ```
 
+When you run the macOS `.app`, place `SP.xlsx` next to `kv-image-downloader.app`, not inside the app bundle.
+
 If you are building inside a restricted shell and PyInstaller reports a cache permission error, run:
 
 ```bash

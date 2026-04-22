@@ -19,6 +19,46 @@ IMAGE_HEADER = "Hình ảnh (url1,url2...)"
 REQUEST_TIMEOUT_SECONDS = 30
 
 
+def application_dir() -> Path:
+    if getattr(sys, "frozen", False):
+        executable_path = Path(sys.executable).resolve()
+        for parent in executable_path.parents:
+            if parent.suffix.lower() == ".app":
+                return parent.parent
+        return executable_path.parent
+    return Path.cwd()
+
+
+def resolve_user_path(path_value: str) -> Path:
+    path = Path(path_value)
+    if path.is_absolute():
+        return path
+    return application_dir() / path
+
+
+def can_prompt_user() -> bool:
+    stdin = sys.stdin
+    return bool(stdin and hasattr(stdin, "isatty") and stdin.isatty())
+
+
+def show_message(title: str, message: str, *, error: bool = False) -> None:
+    try:
+        import tkinter
+        from tkinter import messagebox
+
+        root = tkinter.Tk()
+        root.withdraw()
+        root.attributes("-topmost", True)
+        if error:
+            messagebox.showerror(title, message, parent=root)
+        else:
+            messagebox.showinfo(title, message, parent=root)
+        root.destroy()
+    except Exception:
+        stream = sys.stderr if error else sys.stdout
+        print(f"{title}: {message}", file=stream)
+
+
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
         description="Download product images from an Excel file."
@@ -39,15 +79,20 @@ def parse_args() -> argparse.Namespace:
 
 
 def wait_for_exit(message: str = "Press ENTER to exit.") -> None:
+    if not can_prompt_user():
+        return
     try:
         input(message)
-    except EOFError:
+    except (EOFError, RuntimeError):
         pass
 
 
 def fatal(message: str) -> int:
     print(f"Error: {message}", file=sys.stderr)
     print()
+    if not can_prompt_user():
+        show_message("Download failed", message, error=True)
+        return 1
     wait_for_exit()
     return 1
 
@@ -133,15 +178,21 @@ def download_file(url: str, destination: Path) -> None:
 
 
 def prompt_with_default(label: str, default_value: str) -> str:
+    if not can_prompt_user():
+        return default_value
     prompt = f"{label} [{default_value}]: " if default_value else f"{label}: "
     try:
         entered_value = input(prompt).strip()
-    except EOFError:
+    except (EOFError, RuntimeError):
         return default_value
     return entered_value or default_value
 
 
 def confirm_paths(excel_path: Path, output_dir: Path) -> tuple[Path, Path]:
+    if not can_prompt_user():
+        output_dir.mkdir(parents=True, exist_ok=True)
+        return excel_path, output_dir
+
     print("Product image downloader")
     print()
 
@@ -175,8 +226,8 @@ def confirm_paths(excel_path: Path, output_dir: Path) -> tuple[Path, Path]:
 
 def main() -> int:
     args = parse_args()
-    excel_path = Path(args.excel_path)
-    output_dir = Path(args.output_dir)
+    excel_path = resolve_user_path(args.excel_path)
+    output_dir = resolve_user_path(args.output_dir)
 
     excel_path, output_dir = confirm_paths(excel_path, output_dir)
 
@@ -222,13 +273,24 @@ def main() -> int:
                 failure_count += 1
                 print(f"Failed: {product_code} <- {url} ({exc})")
 
+    summary = "\n".join(
+        [
+            "Download summary",
+            f"Rows processed: {processed_rows}",
+            f"Images downloaded: {success_count}",
+            f"Images failed: {failure_count}",
+            f"Output directory: {output_dir.resolve()}",
+        ]
+    )
+
     print()
-    print("Download summary")
-    print(f"Rows processed: {processed_rows}")
-    print(f"Images downloaded: {success_count}")
-    print(f"Images failed: {failure_count}")
-    print(f"Output directory: {output_dir.resolve()}")
+    print(summary)
     print()
+
+    if not can_prompt_user():
+        show_message("Download complete", summary)
+        return 0
+
     wait_for_exit()
 
     return 0
