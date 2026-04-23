@@ -3,3 +3,6 @@
 /venv/
 /.venv/
 /downloaded_images/
+/*.xlsx
+/*_PLAN.md
+/AGENTS.md
