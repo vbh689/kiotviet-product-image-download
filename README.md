@@ -41,48 +41,24 @@ This uses:
 Custom input file:
 
 ```bash
-python app.py "ds sp moi.xlsx"
+python app.py "SP2.xlsx"
 ```
 
 Custom input file and output folder:
 
 ```bash
-python app.py "ds sp moi.xlsx" "downloaded_images"
+python app.py "SP2.xlsx" "downloaded_images2"
 ```
 
 ## Build an Executable with PyInstaller
 
 PyInstaller does not cross-compile well between operating systems. Build the executable on the same platform you want to run it on:
 
-- Build on Windows for Windows
-- Build on macOS for macOS
-- Build on Linux for Linux
+```bash
+pyinstaller --noconfirm --clean --windowed --onedir --name "kv-image-downloader" app.py
+```
 
 The build output is created in the `dist` folder.
-
-If building on macOS and you get a cache permission error:
-```bash
-PYINSTALLER_CONFIG_DIR=/tmp/pyinstaller pyinstaller --noconfirm --clean --windowed --onedir --name "kv-image-downloader" app.py
-```
-
-## GitHub Actions Builds
-
-`.github/workflows/release.yml` builds for Windows, Linux, and macOS on every push to `main` and on pull requests. It also publishes release assets when a tag matching `v*` is pushed or when triggered manually from the Actions tab.
-
-To publish a release:
-
-```bash
-git tag v0.1
-git push origin v0.1
-```
-
-This creates:
-
-```text
-kv-image-downloader-v0.1-windows.zip
-kv-image-downloader-v0.1-linux.zip
-kv-image-downloader-v0.1-macos.zip
-```
 
 ## Notes
 
