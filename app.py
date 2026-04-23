@@ -12,6 +12,12 @@ from urllib.request import urlopen
 
 from openpyxl import load_workbook
 
+try:
+    import xlrd
+    HAS_XLRD = True
+except ImportError:
+    HAS_XLRD = False
+
 
 DEFAULT_EXCEL_PATH = "SP.xlsx"
 DEFAULT_OUTPUT_DIR = "downloaded_images"
@@ -119,16 +125,35 @@ def load_rows(excel_path: Path) -> tuple[Generator, int, int]:
     if not excel_path.exists():
         raise FileNotFoundError(f"Excel file not found: {excel_path}")
 
+    suffix = excel_path.suffix.lower()
+
     try:
-        workbook = load_workbook(excel_path, read_only=True, data_only=True)
+        if suffix == ".xlsx" or suffix == ".xlsm":
+            workbook = load_workbook(excel_path, read_only=True, data_only=True)
+        elif suffix == ".xls":
+            if not HAS_XLRD:
+                raise RuntimeError(
+                    f"Unable to read '{excel_path}': xlrd is not installed. "
+                    f"Run 'pip install xlrd' to read .xls files."
+                )
+            workbook = xlrd.open_workbook(excel_path)
+        else:
+            raise RuntimeError(f"Unsupported file format: {suffix}")
+    except RuntimeError:
+        raise
     except Exception as exc:
         raise RuntimeError(f"Unable to read Excel file '{excel_path}': {exc}") from exc
 
-    if not workbook.sheetnames:
-        raise ValueError(f"Workbook '{excel_path}' does not contain any worksheets.")
-
-    worksheet = workbook[workbook.sheetnames[0]]
-    rows = worksheet.iter_rows(values_only=True)
+    if hasattr(workbook, "sheetnames"):
+        if not workbook.sheetnames:
+            raise ValueError(f"Workbook '{excel_path}' does not contain any worksheets.")
+        worksheet = workbook[workbook.sheetnames[0]]
+        rows = worksheet.iter_rows(values_only=True)
+    else:
+        if workbook.nsheets == 0:
+            raise ValueError(f"Workbook '{excel_path}' does not contain any worksheets.")
+        worksheet = workbook.sheet_by_index(0)
+        rows = (worksheet.row_values(i) for i in range(worksheet.nrows))
 
     try:
         header_row = list(next(rows))
@@ -493,7 +518,7 @@ def gui_main(app: QApplication) -> int:
             """)
 
             layout = QVBoxLayout(self)
-            self.label = QLabel("DRAG & DROP EXCEL FILE HERE\n(.xlsx only)", self)
+            self.label = QLabel("DRAG & DROP EXCEL FILE HERE\n(.xlsx, .xls)", self)
             self.label.setAlignment(Qt.AlignmentFlag.AlignCenter)
             self.label.setStyleSheet("font-size: 14px; color: #666;")
             layout.addWidget(self.label)
@@ -503,7 +528,7 @@ def gui_main(app: QApplication) -> int:
         def dragEnterEvent(self, event: QDragEnterEvent):
             if event.mimeData().hasUrls():
                 urls = event.mimeData().urls()
-                if urls and urls[0].toLocalFile().lower().endswith(".xlsx"):
+                if urls and urls[0].toLocalFile().lower().endswith((".xlsx", ".xls")):
                     self._highlight = True
                     self.setStyleSheet("""
                         QFrame {
@@ -546,7 +571,7 @@ def gui_main(app: QApplication) -> int:
             urls = event.mimeData().urls()
             if urls:
                 file_path = urls[0].toLocalFile()
-                if file_path.lower().endswith(".xlsx"):
+                if file_path.lower().endswith((".xlsx", ".xls")):
                     event.acceptProposedAction()
                     if self.parent():
                         self.parent().on_file_dropped(file_path)
@@ -628,7 +653,8 @@ def gui_main(app: QApplication) -> int:
             from pathlib import Path
 
             path = Path(file_path)
-            if path.exists() and path.suffix.lower() == ".xlsx":
+            suffix = path.suffix.lower()
+            if path.exists() and suffix in (".xlsx", ".xls"):
                 self.excel_path = path
                 self.file_label.setText(f"Selected file: {path.name}")
                 self.output_label.setText(
@@ -649,7 +675,7 @@ def gui_main(app: QApplication) -> int:
             from PyQt6.QtWidgets import QFileDialog
 
             file_path, _ = QFileDialog.getOpenFileName(
-                self, "Select Excel File", "", "Excel Files (*.xlsx)"
+                self, "Select Excel File", "", "Excel Files (*.xlsx *.xls)"
             )
             if file_path:
                 self.on_file_dropped(file_path)

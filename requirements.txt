@@ -1,3 +1,4 @@
 openpyxl
+xlrd
 pyinstaller
 PyQt6
