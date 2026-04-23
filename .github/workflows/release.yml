@@ -74,21 +74,21 @@ jobs:
         shell: pwsh
         run: |
           New-Item -ItemType Directory -Force -Path release | Out-Null
-          Compress-Archive -Path "dist\${env:APP_NAME}-${env:VERSION}" -DestinationPath "release\${env:APP_NAME}-${env:VERSION}-windows.zip"
+          Compress-Archive -Path "dist\${env:APP_NAME}-${env:VERSION}" -DestinationPath "release\${env:APP_NAME}-${env:VERSION}-windows.zip" -CompressionLevel Optimal
 
       - name: Package Linux release asset
         if: matrix.platform == 'linux'
         shell: bash
         run: |
           mkdir -p release
-          zip -r "release/${APP_NAME}-${VERSION}-linux.zip" "dist/${APP_NAME}-${VERSION}"
+          zip -9 -r "release/${APP_NAME}-${VERSION}-linux.zip" "dist/${APP_NAME}-${VERSION}"
 
       - name: Package macOS release asset
         if: matrix.platform == 'macos'
         shell: bash
         run: |
           mkdir -p release
-          zip -r "release/${APP_NAME}-${VERSION}-macos.zip" "dist/${APP_NAME}-${VERSION}" "dist/${APP_NAME}-${VERSION}.app"
+          zip -9 -r "release/${APP_NAME}-${VERSION}-macos.zip" "dist/${APP_NAME}-${VERSION}" "dist/${APP_NAME}-${VERSION}.app"
 
       - name: Upload packaged asset
         uses: actions/upload-artifact@v4
